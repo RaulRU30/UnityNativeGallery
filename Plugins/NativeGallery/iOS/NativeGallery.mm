@@ -867,7 +867,7 @@ static BOOL pickingMultipleFiles = NO;
 
 			if( [itemProvider hasItemConformingToTypeIdentifier:(NSString *)kUTTypeImage] )
 			{
-				NSLog( @"Picked an image - test" );
+				NSLog( @"Picked an image" );
 				
 				try {
 					if( !simpleMediaPickMode && assetIdentifier != nil )
