@@ -909,8 +909,14 @@ static BOOL pickingMultipleFiles = NO;
 								resultPath = nil;
 							}
 						}
-						else
+						else{
+							if ( error.code == -1000)
+								UnitySendMessage( "NGMediaReceiveCallbackiOS", "OnMediaReceived", "-1000" );
+
 							NSLog( @"Error getting the picked image's path: %@", error );
+							
+						}
+							
 						
 						if( resultPath != nil )
 						{
