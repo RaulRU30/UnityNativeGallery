@@ -869,94 +869,98 @@ static BOOL pickingMultipleFiles = NO;
 			{
 				NSLog( @"Picked an image" );
 				
-				if( !simpleMediaPickMode && assetIdentifier != nil )
-				{
-					PHAsset *asset = [[PHAsset fetchAssetsWithLocalIdentifiers:[NSArray arrayWithObject:assetIdentifier] options:nil] firstObject];
-					resultPath = [self trySavePHAsset:asset atIndex:j];
-				}
-				
-				if( resultPath != nil )
-				{
-					[arrayLock lock];
-					[resultPaths addObject:resultPath];
-					[arrayLock unlock];
-				}
-				else
-				{
-					dispatch_group_enter( group );
-					
-					[itemProvider loadFileRepresentationForTypeIdentifier:(NSString *)kUTTypeImage completionHandler:^( NSURL *url, NSError *error )
+				try {
+					if( !simpleMediaPickMode && assetIdentifier != nil )
 					{
-						if( url != nil )
+						PHAsset *asset = [[PHAsset fetchAssetsWithLocalIdentifiers:[NSArray arrayWithObject:assetIdentifier] options:nil] firstObject];
+						resultPath = [self trySavePHAsset:asset atIndex:j];
+					}
+					
+					if( resultPath != nil )
+					{
+						[arrayLock lock];
+						[resultPaths addObject:resultPath];
+						[arrayLock unlock];
+					}
+					else
+					{
+						dispatch_group_enter( group );
+						
+						[itemProvider loadFileRepresentationForTypeIdentifier:(NSString *)kUTTypeImage completionHandler:^( NSURL *url, NSError *error )
 						{
-							// Copy the image to a temporary location because the returned image will be deleted by the OS after this callback is completed
-							resultPath = [url path];
-							NSString *newPath = [[NSString stringWithFormat:@"%@%d", pickedMediaSavePath, j] stringByAppendingPathExtension:[resultPath pathExtension]];
-							
-							if( ![[NSFileManager defaultManager] fileExistsAtPath:newPath] || [[NSFileManager defaultManager] removeItemAtPath:newPath error:&error] )
+							if( url != nil )
 							{
-								if( [[NSFileManager defaultManager] copyItemAtPath:resultPath toPath:newPath error:&error])
-									resultPath = newPath;
+								// Copy the image to a temporary location because the returned image will be deleted by the OS after this callback is completed
+								resultPath = [url path];
+								NSString *newPath = [[NSString stringWithFormat:@"%@%d", pickedMediaSavePath, j] stringByAppendingPathExtension:[resultPath pathExtension]];
+								
+								if( ![[NSFileManager defaultManager] fileExistsAtPath:newPath] || [[NSFileManager defaultManager] removeItemAtPath:newPath error:&error] )
+								{
+									if( [[NSFileManager defaultManager] copyItemAtPath:resultPath toPath:newPath error:&error])
+										resultPath = newPath;
+									else
+									{
+										NSLog( @"Error copying image: %@", error );
+										resultPath = nil;
+									}
+								}
 								else
 								{
-									NSLog( @"Error copying image: %@", error );
+									NSLog( @"Error deleting existing image: %@", error );
 									resultPath = nil;
 								}
 							}
 							else
+								NSLog( @"Error getting the picked image's path: %@", error );
+							
+							if( resultPath != nil )
 							{
-								NSLog( @"Error deleting existing image: %@", error );
-								resultPath = nil;
-							}
-						}
-						else
-							NSLog( @"Error getting the picked image's path: %@", error );
-						
-						if( resultPath != nil )
-						{
-							[arrayLock lock];
-							[resultPaths addObject:resultPath];
-							[arrayLock unlock];
-						}
-						else
-						{
-							if( [itemProvider canLoadObjectOfClass:[UIImage class]] )
-							{
-								dispatch_group_enter( group );
-								
-								[itemProvider loadObjectOfClass:[UIImage class] completionHandler:^( __kindof id<NSItemProviderReading> object, NSError *error )
-								{
-									if( object != nil && [object isKindOfClass:[UIImage class]] )
-									{
-										resultPath = [[NSString stringWithFormat:@"%@%d", pickedMediaSavePath, j] stringByAppendingPathExtension:@"png"];
-										if( ![self saveImageAsPNG:(UIImage *)object toPath:resultPath] )
-										{
-											NSLog( @"Error creating PNG image" );
-											resultPath = nil;
-										}
-									}
-									else
-										NSLog( @"Error generating UIImage from picked image: %@", error );
-									
-									[arrayLock lock];
-									[resultPaths addObject:( resultPath != nil ? resultPath : @"" )];
-									[arrayLock unlock];
-									
-									dispatch_group_leave( group );
-								}];
+								[arrayLock lock];
+								[resultPaths addObject:resultPath];
+								[arrayLock unlock];
 							}
 							else
 							{
-								NSLog( @"Can't generate UIImage from picked image" );
-								
-								[arrayLock lock];
-								[resultPaths addObject:@""];
-								[arrayLock unlock];
+								if( [itemProvider canLoadObjectOfClass:[UIImage class]] )
+								{
+									dispatch_group_enter( group );
+									
+									[itemProvider loadObjectOfClass:[UIImage class] completionHandler:^( __kindof id<NSItemProviderReading> object, NSError *error )
+									{
+										if( object != nil && [object isKindOfClass:[UIImage class]] )
+										{
+											resultPath = [[NSString stringWithFormat:@"%@%d", pickedMediaSavePath, j] stringByAppendingPathExtension:@"png"];
+											if( ![self saveImageAsPNG:(UIImage *)object toPath:resultPath] )
+											{
+												NSLog( @"Error creating PNG image" );
+												resultPath = nil;
+											}
+										}
+										else
+											NSLog( @"Error generating UIImage from picked image: %@", error );
+										
+										[arrayLock lock];
+										[resultPaths addObject:( resultPath != nil ? resultPath : @"" )];
+										[arrayLock unlock];
+										
+										dispatch_group_leave( group );
+									}];
+								}
+								else
+								{
+									NSLog( @"Can't generate UIImage from picked image" );
+									
+									[arrayLock lock];
+									[resultPaths addObject:@""];
+									[arrayLock unlock];
+								}
 							}
-						}
-						
-						dispatch_group_leave( group );
-					}];
+							
+							dispatch_group_leave( group );
+						}];
+					}
+				} catch (NSException *exception) {
+					NSLog(@"Exception found during image importing: %@", exception);
 				}
 			}
 			else if( CHECK_IOS_VERSION( @"9.1" ) && [itemProvider hasItemConformingToTypeIdentifier:(NSString *)kUTTypeLivePhoto] )
