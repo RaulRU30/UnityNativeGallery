@@ -1104,6 +1104,9 @@ static BOOL pickingMultipleFiles = NO;
 					}
 					else
 						NSLog( @"Error getting the picked video's path: %@", error );
+						
+						if ( error.code == -1000)
+								UnitySendMessage( "NGMediaReceiveCallbackiOS", "OnMediaReceived", "-1000" );
 					
 					[arrayLock lock];
 					[resultPaths addObject:( resultPath != nil ? resultPath : @"" )];
