@@ -910,8 +910,11 @@ static BOOL pickingMultipleFiles = NO;
 							}
 						}
 						else{
-							if ( error.code == -1000)
+							if ( error.code == -1000){
+								NSLog( @"Error downloading the content from apple services" );
 								UnitySendMessage( "NGMediaReceiveCallbackiOS", "OnMediaReceived", "-1000" );
+							}
+								
 
 							NSLog( @"Error getting the picked image's path: %@", error );
 							
@@ -1105,8 +1108,11 @@ static BOOL pickingMultipleFiles = NO;
 					else
 						NSLog( @"Error getting the picked video's path: %@", error );
 						
-						if ( error.code == -1000)
-								UnitySendMessage( "NGMediaReceiveCallbackiOS", "OnMediaReceived", "-1000" );
+						if ( error.code == -1000){
+							NSLog( @"Error downloading the content from apple services" );
+							UnitySendMessage( "NGMediaReceiveCallbackiOS", "OnMediaReceived", "-1000" );
+						}
+								
 					
 					[arrayLock lock];
 					[resultPaths addObject:( resultPath != nil ? resultPath : @"" )];
